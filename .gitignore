@@ -1,0 +1,27 @@
+# Environment — use .env.example as template
+# .env.docker is committed intentionally: contains only Docker service names and ports, no secrets
+.env
+
+# Generated — rebuild with make compile-docs / make validate-krakend
+api_docs/dist/
+krakend/dist/
+krakend/krakend_compiled.json
+
+# Go
+*.exe
+*.test
+*.out
+coverage.out
+coverage.html
+
+# macOS
+.DS_Store
+
+# Claude / session memory
+.claude/
+.remember/
+
+# IDE
+.idea/
+.vscode/
+*.swp
