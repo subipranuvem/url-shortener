@@ -1,0 +1,174 @@
+services:
+  # ScyllaDB uses Seastar, which requires async I/O (AIO) slots from the Linux kernel.
+  # Each node needs ~66k slots; with 3 nodes we need ~200k.
+  # Docker Desktop's Linux VM defaults to 65536 (aio-max-nr), which is enough for one node but
+  # causes FATAL startup failures on nodes 2 and 3.
+  # This privileged container sets the parameter on the VM kernel before any Scylla node starts.
+  # The value resets to default if Docker Desktop is restarted — re-running docker compose up
+  # brings this service back and re-applies the setting automatically.
+  sysctl-init:
+    image: alpine:3.21
+    container_name: sysctl-init
+    privileged: true
+    command: sysctl -w fs.aio-max-nr=1048576
+    restart: "no"
+
+  scylla-1:
+    image: scylladb/scylla:2026.1
+    container_name: scylla-1
+    command: --smp 2 --memory 1G --overprovisioned 1
+    mem_limit: 5G
+    cpus: 2.0
+    depends_on:
+      sysctl-init:
+        condition: service_completed_successfully
+    ports:
+      - "9042:9042"
+    volumes:
+      - scylla_data_1:/var/lib/scylla
+    healthcheck:
+      test: ["CMD-SHELL", 'cqlsh -e "SELECT now() FROM system.local" || exit 1']
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
+
+  scylla-2:
+    image: scylladb/scylla:2026.1
+    container_name: scylla-2
+    command: --smp 2 --memory 1G --overprovisioned 1 --seeds scylla-1
+    mem_limit: 5G
+    cpus: 2.0
+    volumes:
+      - scylla_data_2:/var/lib/scylla
+    depends_on:
+      scylla-1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", 'cqlsh -e "SELECT now() FROM system.local" || exit 1']
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  scylla-3:
+    image: scylladb/scylla:2026.1
+    container_name: scylla-3
+    command: --smp 2 --memory 1G --overprovisioned 1 --seeds scylla-1
+    mem_limit: 5G
+    cpus: 2.0
+    volumes:
+      - scylla_data_3:/var/lib/scylla
+    depends_on:
+      scylla-1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", 'cqlsh -e "SELECT now() FROM system.local" || exit 1']
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  redis:
+    image: redis:8.8.0-alpine
+    container_name: redis
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 384M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile.migrate
+    container_name: migrate
+    volumes:
+      - ./migrations:/app/migrations
+    environment:
+      - SCYLLA_HOSTS=scylla-1
+    depends_on:
+      scylla-1:
+        condition: service_healthy
+      scylla-2:
+        condition: service_healthy
+      scylla-3:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build: .
+    container_name: url-shortener
+    ports:
+      - "8080:8080"
+    env_file: .env.docker
+    restart: on-failure
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+
+  krakend:
+    image: krakend:${KRAKEND_VERSION:-2.13.8}
+    container_name: krakend
+    ports:
+      - "8000:8080"
+    volumes:
+      - ./krakend:/etc/krakend
+    environment:
+      - FC_ENABLE=1
+      - FC_SETTINGS=/etc/krakend/settings/prod
+      - FC_PARTIALS=/etc/krakend/partials
+      - FC_TEMPLATES=/etc/krakend/templates
+      - FC_OUT=/tmp/krakend_out.json
+    command: ["run", "-c", "/etc/krakend/krakend.tmpl.json"]
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+
+  docs:
+    image: swaggerapi/swagger-ui:v5.32.11
+    container_name: docs
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./api_docs/dist/openapi.yaml:/tmp/openapi.yaml
+    environment:
+      - SWAGGER_JSON=/tmp/openapi.yaml
+    profiles:
+      - docs
+
+volumes:
+  scylla_data_1:
+  scylla_data_2:
+  scylla_data_3:
