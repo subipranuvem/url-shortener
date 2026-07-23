@@ -1,0 +1,8 @@
+{
+    "port": 8080,
+    "environment": "development",
+    "api_host": "http://api:8080",
+    "timeout": "10000ms",
+    "debug_endpoint": true,
+    "echo_endpoint": true
+}

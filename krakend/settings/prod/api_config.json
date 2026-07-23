@@ -1,0 +1,8 @@
+{
+    "port": 8080,
+    "environment": "production",
+    "api_host": "http://api:8080",
+    "timeout": "10000ms",
+    "debug_endpoint": false,
+    "echo_endpoint": false
+}

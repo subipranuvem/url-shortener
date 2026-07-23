@@ -1,0 +1,83 @@
+{{ define "endpoint-post-urls" }}
+{
+    "endpoint": "/urls",
+    "method": "POST",
+    "output_encoding": "no-op",
+    "backend": [{
+        "url_pattern": "/urls",
+        "host": ["{{ .api_config.api_host }}"],
+        "method": "POST",
+        "encoding": "no-op"
+    }]
+}
+{{ end }}
+
+{{ define "endpoint-get-url" }}
+{
+    "endpoint": "/urls/{code}",
+    "method": "GET",
+    "output_encoding": "no-op",
+    "backend": [{
+        "url_pattern": "/urls/{code}",
+        "host": ["{{ .api_config.api_host }}"],
+        "method": "GET",
+        "encoding": "no-op"
+    }]
+}
+{{ end }}
+
+{{ define "endpoint-delete-url" }}
+{
+    "endpoint": "/urls/{code}",
+    "method": "DELETE",
+    "output_encoding": "no-op",
+    "backend": [{
+        "url_pattern": "/urls/{code}",
+        "host": ["{{ .api_config.api_host }}"],
+        "method": "DELETE",
+        "encoding": "no-op"
+    }]
+}
+{{ end }}
+
+{{ define "endpoint-url-stats" }}
+{
+    "endpoint": "/urls/{code}/stats",
+    "method": "GET",
+    "output_encoding": "no-op",
+    "backend": [{
+        "url_pattern": "/urls/{code}/stats",
+        "host": ["{{ .api_config.api_host }}"],
+        "method": "GET",
+        "encoding": "no-op"
+    }]
+}
+{{ end }}
+
+{{ define "endpoint-redirect" }}
+{
+    "endpoint": "/{code}",
+    "method": "GET",
+    "output_encoding": "no-op",
+    "backend": [{
+        "url_pattern": "/{code}",
+        "host": ["{{ .api_config.api_host }}"],
+        "method": "GET",
+        "encoding": "no-op"
+    }]
+}
+{{ end }}
+
+{{ define "endpoint-health" }}
+{
+    "endpoint": "/health",
+    "method": "GET",
+    "output_encoding": "no-op",
+    "backend": [{
+        "url_pattern": "/health",
+        "host": ["{{ .api_config.api_host }}"],
+        "method": "GET",
+        "encoding": "no-op"
+    }]
+}
+{{ end }}

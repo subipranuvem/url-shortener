@@ -1,0 +1,20 @@
+{
+    "$schema": "https://www.krakend.io/schema/v2.13/krakend.json",
+    "version": 3,
+    "name": "URL Shortener API Gateway",
+    "port": {{ .api_config.port }},
+    "timeout": "{{ .api_config.timeout }}",
+    "debug_endpoint": {{ .api_config.debug_endpoint }},
+    "echo_endpoint": {{ .api_config.echo_endpoint }},
+    "extra_config": {
+        {{ include "cors.tmpl" }}
+    },
+    "endpoints": [
+        {{ template "endpoint-post-urls" . }},
+        {{ template "endpoint-get-url" . }},
+        {{ template "endpoint-delete-url" . }},
+        {{ template "endpoint-url-stats" . }},
+        {{ template "endpoint-redirect" . }},
+        {{ template "endpoint-health" . }}
+    ]
+}
