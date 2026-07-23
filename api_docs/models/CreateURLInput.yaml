@@ -1,0 +1,12 @@
+type: object
+description: Input for creating a new shortened URL
+required:
+  - long_url
+properties:
+  long_url:
+    $ref: "./../properties/LongURL.yaml"
+  alias:
+    type: string
+    description: Optional custom alias; if omitted a random code is generated
+    example: "mygoogle"
+    minLength: 1

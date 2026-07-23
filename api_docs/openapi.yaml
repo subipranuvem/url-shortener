@@ -1,0 +1,32 @@
+openapi: "3.0.3"
+
+info:
+  title: URL Shortener API
+  description: Production-ready URL shortener built with Go, Gin, ScyllaDB, and Redis.
+  version: "1.0.0"
+  contact:
+    email: joaomarcelo@juit.io
+
+servers:
+  - url: http://localhost:8080
+    description: Local development
+
+tags:
+  - name: urls
+    description: URL management — create, retrieve, deactivate
+  - name: redirect
+    description: Short URL redirection
+  - name: health
+    description: Service health checks
+
+paths:
+  /urls:
+    $ref: "./paths/urls.yaml"
+  /urls/{code}:
+    $ref: "./paths/urls-{code}.yaml"
+  /urls/{code}/stats:
+    $ref: "./paths/urls-{code}-stats.yaml"
+  /{code}:
+    $ref: "./paths/redirect-{code}.yaml"
+  /health:
+    $ref: "./paths/health.yaml"

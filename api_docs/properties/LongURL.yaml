@@ -1,0 +1,4 @@
+type: string
+format: uri
+description: The original long URL to be shortened
+example: "https://example.com/some/very/long/path"

@@ -1,0 +1,19 @@
+type: object
+description: Response after creating a new shortened URL
+properties:
+  code:
+    allOf:
+      - $ref: "./../properties/Code.yaml"
+      - readOnly: true
+  long_url:
+    $ref: "./../properties/LongURL.yaml"
+  short_url:
+    type: string
+    format: uri
+    description: Full shortened URL ready to share
+    example: "https://short.ly/aB3xY"
+    readOnly: true
+  is_active:
+    $ref: "./../properties/IsActive.yaml"
+  created_at:
+    $ref: "./../properties/CreatedAt.yaml"

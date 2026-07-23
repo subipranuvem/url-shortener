@@ -1,0 +1,8 @@
+description: Resource existed but has been deactivated
+content:
+  application/json:
+    schema:
+      $ref: "./ErrorWithFeedback.yaml"
+    example:
+      message: "url_inactive"
+      hint: "This short URL has been deactivated"

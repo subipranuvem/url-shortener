@@ -1,0 +1,8 @@
+description: Resource already exists
+content:
+  application/json:
+    schema:
+      $ref: "./ErrorWithFeedback.yaml"
+    example:
+      message: "code_already_exists"
+      hint: "The requested alias is already in use"

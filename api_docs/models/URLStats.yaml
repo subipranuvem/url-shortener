@@ -1,0 +1,19 @@
+type: object
+description: Access statistics for a shortened URL
+properties:
+  code:
+    $ref: "./../properties/Code.yaml"
+  long_url:
+    $ref: "./../properties/LongURL.yaml"
+  is_active:
+    $ref: "./../properties/IsActive.yaml"
+  total_accesses:
+    type: integer
+    format: int64
+    description: Total number of times this short URL was accessed
+    example: 42
+    readOnly: true
+  created_at:
+    $ref: "./../properties/CreatedAt.yaml"
+  updated_at:
+    $ref: "./../properties/UpdatedAt.yaml"

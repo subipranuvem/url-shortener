@@ -1,0 +1,8 @@
+description: Invalid request payload or parameters
+content:
+  application/json:
+    schema:
+      $ref: "./ErrorWithFeedback.yaml"
+    example:
+      message: "validation_error"
+      hint: "Field 'long_url' must be a valid URI"

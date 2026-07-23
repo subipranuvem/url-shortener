@@ -1,0 +1,22 @@
+get:
+  tags:
+    - health
+  summary: Health check
+  operationId: healthCheck
+  responses:
+    "200":
+      description: Service is healthy
+      content:
+        application/json:
+          schema:
+            $ref: "./../models/HealthStatus.yaml"
+    "503":
+      description: Service is degraded
+      content:
+        application/json:
+          schema:
+            $ref: "./../models/HealthStatus.yaml"
+          example:
+            status: "degraded"
+            database: "error"
+            cache: "ok"

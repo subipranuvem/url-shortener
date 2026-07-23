@@ -1,0 +1,15 @@
+type: object
+description: A shortened URL resource
+properties:
+  code:
+    allOf:
+      - $ref: "./../properties/Code.yaml"
+      - readOnly: true
+  long_url:
+    $ref: "./../properties/LongURL.yaml"
+  is_active:
+    $ref: "./../properties/IsActive.yaml"
+  created_at:
+    $ref: "./../properties/CreatedAt.yaml"
+  updated_at:
+    $ref: "./../properties/UpdatedAt.yaml"

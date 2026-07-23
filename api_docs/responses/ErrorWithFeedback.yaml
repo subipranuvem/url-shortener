@@ -1,0 +1,13 @@
+type: object
+description: Standard error response with human-readable feedback
+required:
+  - message
+properties:
+  message:
+    type: string
+    description: Machine-readable error key
+    example: "url_not_found"
+  hint:
+    type: string
+    description: Human-readable explanation of the error
+    example: "No URL found for the given code"

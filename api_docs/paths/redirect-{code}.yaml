@@ -1,0 +1,27 @@
+parameters:
+  - name: code
+    in: path
+    required: true
+    schema:
+      $ref: "./../properties/Code.yaml"
+
+get:
+  tags:
+    - redirect
+  summary: Redirect to the original URL
+  operationId: redirectByCode
+  responses:
+    "302":
+      description: Redirect to the original long URL
+      headers:
+        Location:
+          schema:
+            type: string
+            format: uri
+          description: The original long URL
+    "404":
+      $ref: "./../responses/NotFound.yaml"
+    "410":
+      $ref: "./../responses/Gone.yaml"
+    "500":
+      $ref: "./../responses/InternalServerError.yaml"

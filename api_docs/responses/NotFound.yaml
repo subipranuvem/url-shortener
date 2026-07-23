@@ -1,0 +1,8 @@
+description: Resource not found
+content:
+  application/json:
+    schema:
+      $ref: "./ErrorWithFeedback.yaml"
+    example:
+      message: "url_not_found"
+      hint: "No URL found for the given code"

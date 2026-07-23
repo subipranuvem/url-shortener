@@ -1,0 +1,4 @@
+type: string
+description: Unique short code identifying the URL (base62, 5 characters)
+example: "aB3x9"
+minLength: 1

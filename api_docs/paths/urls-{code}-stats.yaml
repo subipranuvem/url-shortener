@@ -1,0 +1,23 @@
+parameters:
+  - name: code
+    in: path
+    required: true
+    schema:
+      $ref: "./../properties/Code.yaml"
+
+get:
+  tags:
+    - urls
+  summary: Get access statistics for a shortened URL
+  operationId: getURLStats
+  responses:
+    "200":
+      description: Stats retrieved successfully
+      content:
+        application/json:
+          schema:
+            $ref: "./../models/URLStats.yaml"
+    "404":
+      $ref: "./../responses/NotFound.yaml"
+    "500":
+      $ref: "./../responses/InternalServerError.yaml"

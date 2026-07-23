@@ -1,0 +1,36 @@
+parameters:
+  - name: code
+    in: path
+    required: true
+    schema:
+      $ref: "./../properties/Code.yaml"
+
+get:
+  tags:
+    - urls
+  summary: Get URL by code
+  operationId: getURLByCode
+  responses:
+    "200":
+      description: URL found
+      content:
+        application/json:
+          schema:
+            $ref: "./../models/URL.yaml"
+    "404":
+      $ref: "./../responses/NotFound.yaml"
+    "500":
+      $ref: "./../responses/InternalServerError.yaml"
+
+delete:
+  tags:
+    - urls
+  summary: Deactivate a shortened URL
+  operationId: deactivateURL
+  responses:
+    "204":
+      description: URL deactivated successfully
+    "404":
+      $ref: "./../responses/NotFound.yaml"
+    "500":
+      $ref: "./../responses/InternalServerError.yaml"
