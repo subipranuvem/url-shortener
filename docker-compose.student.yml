@@ -1,0 +1,37 @@
+services:
+  sysctl-init:
+    image: alpine:3.21
+    container_name: sysctl-init
+    privileged: true
+    command: sysctl -w fs.aio-max-nr=1048576
+    restart: "no"
+
+  scylla-node:
+    image: scylladb/scylla:2026.1
+    container_name: scylla-node
+    command: >
+      --smp 2 --memory 1G --overprovisioned 1
+      --seeds ${TEACHER_IP}
+      --listen-address 0.0.0.0
+      --rpc-address 0.0.0.0
+      --broadcast-address ${MY_IP}
+      --broadcast-rpc-address ${MY_IP}
+    mem_limit: 5G
+    cpus: 2.0
+    depends_on:
+      sysctl-init:
+        condition: service_completed_successfully
+    ports:
+      - "7000:7000"
+      - "9042:9042"
+    volumes:
+      - scylla_data:/var/lib/scylla
+    healthcheck:
+      test: ["CMD-SHELL", 'cqlsh -e "SELECT now() FROM system.local" || exit 1']
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+volumes:
+  scylla_data:
