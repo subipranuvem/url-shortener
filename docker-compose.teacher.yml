@@ -32,50 +32,6 @@ services:
       retries: 10
       start_period: 90s
 
-  scylla-2:
-    image: scylladb/scylla:2026.1
-    container_name: scylla-2
-    command: >
-      --smp 2 --memory 1G --overprovisioned 1
-      --seeds scylla-seed
-    mem_limit: 5G
-    cpus: 2.0
-    extra_hosts:
-      - "${TEACHER_IP}:host-gateway"
-    depends_on:
-      scylla-seed:
-        condition: service_healthy
-    volumes:
-      - scylla_data_2:/var/lib/scylla
-    healthcheck:
-      test: ["CMD-SHELL", 'cqlsh -e "SELECT now() FROM system.local" || exit 1']
-      interval: 15s
-      timeout: 10s
-      retries: 10
-      start_period: 60s
-
-  scylla-3:
-    image: scylladb/scylla:2026.1
-    container_name: scylla-3
-    command: >
-      --smp 2 --memory 1G --overprovisioned 1
-      --seeds scylla-seed
-    mem_limit: 5G
-    cpus: 2.0
-    extra_hosts:
-      - "${TEACHER_IP}:host-gateway"
-    depends_on:
-      scylla-seed:
-        condition: service_healthy
-    volumes:
-      - scylla_data_3:/var/lib/scylla
-    healthcheck:
-      test: ["CMD-SHELL", 'cqlsh -e "SELECT now() FROM system.local" || exit 1']
-      interval: 15s
-      timeout: 10s
-      retries: 10
-      start_period: 60s
-
   redis:
     image: redis:8.8.0-alpine
     container_name: redis
@@ -109,10 +65,6 @@ services:
     depends_on:
       scylla-seed:
         condition: service_healthy
-      scylla-2:
-        condition: service_healthy
-      scylla-3:
-        condition: service_healthy
     restart: "no"
 
   api:
@@ -132,8 +84,6 @@ services:
       - CACHE_DEFAULT_TTL_IN_MILLIS=3600000
     restart: on-failure
     depends_on:
-      migrate:
-        condition: service_completed_successfully
       redis:
         condition: service_healthy
     healthcheck:
@@ -175,5 +125,3 @@ services:
 
 volumes:
   scylla_data:
-  scylla_data_2:
-  scylla_data_3:

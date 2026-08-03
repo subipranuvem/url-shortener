@@ -21,9 +21,7 @@ services:
     depends_on:
       sysctl-init:
         condition: service_completed_successfully
-    ports:
-      - "7000:7000"
-      - "9042:9042"
+
     volumes:
       - scylla_data:/var/lib/scylla
     healthcheck:

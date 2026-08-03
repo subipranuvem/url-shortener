@@ -1,8 +1,8 @@
 # Demo: Cluster ScyllaDB Distribuído
 
-Cada máquina vira um nó real do cluster. O professor sobe o seed + API completa (3 nós locais). Cada aluno sobe um nó ScyllaDB que entra no cluster.
+O professor sobe o nó seed + API. Dois alunos entram como nós 2 e 3. Com 3 nós no cluster, o professor roda a migration e a API fica operacional.
 
-> **Pré-requisito de rede**: professor e alunos devem estar na **mesma rede WiFi**. O cluster usa o IP local (LAN) — IPs de redes distintas não se comunicam via gossip.
+> **Pré-requisito de rede**: professor e alunos devem estar na **mesma rede WiFi**. O cluster usa IP local (LAN).
 
 ---
 
@@ -20,27 +20,24 @@ ipconfig getifaddr en0
 # Exemplo: 192.168.1.100
 ```
 
-> Esse é o `TEACHER_IP`. Use sempre o IP da interface WiFi (`en0`), não o IP NetBird nem o Docker interno.
+> Esse é o `TEACHER_IP`. Use o IP da interface WiFi (`en0`). Não use IP Docker (`172.x`) nem NetBird (`100.x`).
 
 ---
 
-## 2. Professor: subir o cluster seed + API
+## 2. Professor: subir seed + API stack
 
 ```bash
 export TEACHER_IP=$(ipconfig getifaddr en0)
 
-docker compose -f docker-compose.teacher.yml up -d
+docker compose -f docker-compose.teacher.yml up -d scylla-seed redis krakend
 ```
 
-Acompanhar a subida:
+Aguardar o seed ficar `healthy` (~90s):
 ```bash
-docker compose -f docker-compose.teacher.yml logs -f scylla-seed scylla-2 scylla-3
+docker compose -f docker-compose.teacher.yml ps scylla-seed
 ```
 
-Aguardar os 3 nós ficarem `healthy` (~3-4 min) antes de liberar para os alunos:
-```bash
-docker compose -f docker-compose.teacher.yml ps
-```
+**Não rodar a API ainda** — aguardar alunos entrarem primeiro.
 
 ---
 
@@ -49,24 +46,29 @@ docker compose -f docker-compose.teacher.yml ps
 ```bash
 # No diretório do projeto clonado
 export TEACHER_IP=<IP_LAN_DO_PROFESSOR>   # ex: 192.168.1.100
-export MY_IP=$(ipconfig getifaddr en0)    # IP LAN do aluno (macOS)
+export MY_IP=$(ipconfig getifaddr en0)    # macOS
 # Linux: export MY_IP=$(hostname -I | awk '{print $1}')
 
 docker compose -f docker-compose.student.yml up -d
 ```
 
-O nó entra em bootstrap e começa a receber schema do seed. Demora ~2 minutos.
+O nó entra em bootstrap e recebe schema do seed. Demora ~2 minutos.
+
+Verificar se entrou (`UJ` = ainda bootstrapping, `UN` = pronto):
+```bash
+docker logs scylla-node --follow
+```
 
 ---
 
-## 4. Verificar o cluster
+## 4. Professor: verificar 3 nós e rodar migration
 
-No terminal do professor:
+Após os 2 alunos entrarem, verificar:
 ```bash
 docker exec scylla-seed nodetool status
 ```
 
-Saída esperada (professor + 2 alunos):
+Saída esperada (seed + 2 alunos):
 ```
 Datacenter: datacenter1
 =======================
@@ -74,19 +76,33 @@ Status=Up/Down
 |/ State=Normal/Leaving/Joining/Moving
 -- Address         Load    Tokens Owns  Host ID  Rack
 UN 192.168.1.100  123 KB  256    ?     ...      rack1   <- professor (seed)
-UN 192.168.1.100  118 KB  256    ?     ...      rack1   <- professor (scylla-2)
-UN 192.168.1.100  115 KB  256    ?     ...      rack1   <- professor (scylla-3)
 UN 192.168.1.101  98 KB   256    ?     ...      rack1   <- aluno 1
 UN 192.168.1.102  87 KB   256    ?     ...      rack1   <- aluno 2
 ```
 
-`UN` = Up + Normal. `UJ` = ainda em bootstrap, aguardar.
+Com 3 nós `UN`, rodar a migration:
+```bash
+docker compose -f docker-compose.teacher.yml run --rm migrate
+```
 
 ---
 
-## 5. Acessar a API
+## 5. Professor: subir a API
 
-A API roda na máquina do professor. Alunos na mesma rede acessam pelo IP do professor:
+```bash
+docker compose -f docker-compose.teacher.yml up -d api
+```
+
+Verificar:
+```bash
+docker logs url-shortener --follow
+```
+
+---
+
+## 6. Acessar a API
+
+Todos os alunos acessam pelo IP do professor:
 
 - KrakenD (gateway): `http://<TEACHER_IP>:8000`
 - API direta: `http://<TEACHER_IP>:8080`
@@ -111,7 +127,7 @@ docker exec scylla-seed nodetool ring
 # Ver logs do nó (aluno)
 docker logs scylla-node --follow
 
-# Simular falha de nó (aluno)
+# Simular falha de nó (aluno para o container)
 docker compose -f docker-compose.student.yml stop scylla-node
 
 # Recolocar nó no ar
@@ -128,7 +144,7 @@ docker compose -f docker-compose.teacher.yml down -v
 
 ## Troubleshooting
 
-### Nó do aluno fica em `UJ` (joining) por mais de 5 min
+### Nó do aluno fica em `UJ` por mais de 5 min
 
 ```bash
 # Testar conectividade com o seed do professor
@@ -140,40 +156,31 @@ nc -zv <TEACHER_IP> 7000
 
 ### Erro `broadcast address mismatch`
 
-`MY_IP` não é o IP da interface de rede correta. Verificar:
+`MY_IP` não é o IP da interface correta:
 ```bash
 ifconfig | grep "inet " | grep -v 127
 # Usar o IP da interface WiFi (en0 no macOS)
 ```
 
-### Nós 2 e 3 do professor não ficam healthy
+### Migration falha com "not enough nodes"
 
-Verificar se `TEACHER_IP` está correto:
+Menos de 3 nós no cluster quando a migration rodou. Aguardar os 2 alunos entrarem (`UN`) antes de rodar:
 ```bash
-echo $TEACHER_IP
-# Deve ser o IP WiFi (192.168.x.x), não IP Docker (172.x.x.x) nem NetBird (100.x.x.x)
+docker exec scylla-seed nodetool status
+# Confirmar 3 linhas UN antes de rodar migrate
 ```
 
 ### Container `sysctl-init` falha
 
-Em macOS com Docker Desktop: ignorar, o Docker Desktop gerencia o kernel automaticamente.
-Em Linux: rodar com `sudo docker compose ...` ou adicionar o usuário ao grupo `docker`.
+macOS Docker Desktop: ignorar, gerenciado automaticamente.
+Linux: rodar com `sudo` ou adicionar usuário ao grupo `docker`.
 
 ### API não conecta ao ScyllaDB
 
-A API conecta ao `scylla-seed` via rede interna Docker. Verificar:
+Migration ainda não rodou ou falhou:
 ```bash
 docker logs url-shortener
-docker logs migrate
-```
-
-### Fator de replicação insuficiente
-
-Escritas com `CONSISTENCY=QUORUM` exigem `RF >= 3` e pelo menos 2 nós disponíveis. Com menos de 3 nós no total:
-
-```bash
-docker exec -it scylla-seed cqlsh
-ALTER KEYSPACE shortener WITH replication = {'class': 'NetworkTopologyStrategy', 'datacenter1': 2};
+docker compose -f docker-compose.teacher.yml run --rm migrate
 ```
 
 ---
@@ -184,6 +191,6 @@ Para alunos em redes diferentes acessarem **somente a API** (sem entrar no clust
 
 1. Professor instala e sobe NetBird: `sudo netbird up`
 2. Professor expõe a porta da API: `ngrok http 8000`
-3. Alunos usam a URL do ngrok — não precisam de Docker nem do `docker-compose.student.yml`
+3. Alunos usam a URL do ngrok — não precisam de Docker
 
 Neste caso os alunos são **clientes** da API, não nós do cluster.
