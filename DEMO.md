@@ -2,7 +2,7 @@
 
 O professor sobe o nó seed + API. Dois alunos entram como nós 2 e 3. Com 3 nós no cluster, o professor roda a migration e a API fica operacional.
 
-> **Pré-requisito de rede**: professor e alunos devem estar na **mesma rede WiFi**. O cluster usa IP local (LAN).
+> **Pré-requisito de rede**: professor e alunos devem ter o **NetBird instalado e conectado na mesma rede virtual**. O gossip do ScyllaDB usa os IPs NetBird (`100.x.x.x`).
 
 ---
 
@@ -10,24 +10,25 @@ O professor sobe o nó seed + API. Dois alunos entram como nós 2 e 3. Com 3 nó
 
 - Docker + Docker Compose instalados
 - Clonar este repositório
+- NetBird instalado e conectado: `sudo netbird up`
 
 ---
 
-## 1. Professor: descobrir o IP local
+## 1. Professor: descobrir o IP NetBird
 
 ```bash
-ipconfig getifaddr en0
-# Exemplo: 192.168.1.100
+netbird status | grep "NetBird IP"
+# Exemplo: NetBird IP: 100.64.0.1/24
 ```
 
-> Esse é o `TEACHER_IP`. Use o IP da interface WiFi (`en0`). Não use IP Docker (`172.x`) nem NetBird (`100.x`).
+> Esse é o `TEACHER_IP`. Use o IP NetBird (`100.x.x.x`). Não use IP WiFi LAN (`192.168.x`) nem IP Docker (`172.x`).
 
 ---
 
 ## 2. Professor: subir seed + API stack
 
 ```bash
-export TEACHER_IP=$(ipconfig getifaddr en0)
+export TEACHER_IP=$(netbird status | grep "NetBird IP:" | awk '{print $3}' | cut -d'/' -f1)
 
 docker compose -f docker-compose.teacher.yml up -d scylla-seed redis krakend
 ```
@@ -45,9 +46,11 @@ docker compose -f docker-compose.teacher.yml ps scylla-seed
 
 ```bash
 # No diretório do projeto clonado
-export TEACHER_IP=<IP_LAN_DO_PROFESSOR>   # ex: 192.168.1.100
-export MY_IP=$(ipconfig getifaddr en0)    # macOS
-# Linux: export MY_IP=$(hostname -I | awk '{print $1}')
+export TEACHER_IP=<IP_NETBIRD_DO_PROFESSOR>   # ex: 100.64.0.1
+
+# Ubuntu (NetBird cria interface wt0):
+export MY_IP=$(netbird status | grep "NetBird IP:" | awk '{print $3}' | cut -d'/' -f1)
+# ou: MY_IP=$(ip addr show wt0 | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1)
 
 docker compose -f docker-compose.student.yml up -d
 ```
@@ -74,10 +77,10 @@ Datacenter: datacenter1
 =======================
 Status=Up/Down
 |/ State=Normal/Leaving/Joining/Moving
--- Address         Load    Tokens Owns  Host ID  Rack
-UN 192.168.1.100  123 KB  256    ?     ...      rack1   <- professor (seed)
-UN 192.168.1.101  98 KB   256    ?     ...      rack1   <- aluno 1
-UN 192.168.1.102  87 KB   256    ?     ...      rack1   <- aluno 2
+-- Address       Load    Tokens Owns  Host ID  Rack
+UN 100.64.0.1   123 KB  256    ?     ...      rack1   <- professor (seed)
+UN 100.64.0.2   98 KB   256    ?     ...      rack1   <- aluno 1
+UN 100.64.0.3   87 KB   256    ?     ...      rack1   <- aluno 2
 ```
 
 Com 3 nós `UN`, rodar a migration:
@@ -147,19 +150,19 @@ docker compose -f docker-compose.teacher.yml down -v
 ### Nó do aluno fica em `UJ` por mais de 5 min
 
 ```bash
-# Testar conectividade com o seed do professor
+# Testar conectividade com o seed do professor via NetBird
 nc -zv <TEACHER_IP> 7000
 
-# Se falhar: máquinas em redes diferentes ou firewall bloqueando porta 7000
-# Confirmar que ambos estão na mesma WiFi
+# Se falhar: NetBird desconectado ou firewall bloqueando porta 7000
+netbird status   # confirmar "Connected"
 ```
 
 ### Erro `broadcast address mismatch`
 
-`MY_IP` não é o IP da interface correta:
+`MY_IP` não é o IP NetBird:
 ```bash
-ifconfig | grep "inet " | grep -v 127
-# Usar o IP da interface WiFi (en0 no macOS)
+netbird status | grep "NetBird IP"
+# Confirmar que MY_IP bate com esse valor
 ```
 
 ### Migration falha com "not enough nodes"
@@ -185,12 +188,18 @@ docker compose -f docker-compose.teacher.yml run --rm migrate
 
 ---
 
-## Acesso remoto (opcional)
+## Acesso remoto (somente API, sem entrar no cluster)
 
-Para alunos em redes diferentes acessarem **somente a API** (sem entrar no cluster como nó):
+Para alunos que querem apenas consumir a API sem virar nó:
 
-1. Professor instala e sobe NetBird: `sudo netbird up`
-2. Professor expõe a porta da API: `ngrok http 8000`
-3. Alunos usam a URL do ngrok — não precisam de Docker
+1. Professor e aluno conectados no NetBird
+2. Aluno acessa direto pelo IP NetBird do professor: `http://<TEACHER_NETBIRD_IP>:8000`
+
+Sem Docker necessário no lado do aluno.
+
+### Alternativa sem NetBird (ngrok)
+
+1. Professor: `ngrok http 8000`
+2. Alunos usam a URL do ngrok
 
 Neste caso os alunos são **clientes** da API, não nós do cluster.

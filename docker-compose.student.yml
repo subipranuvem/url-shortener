@@ -9,6 +9,7 @@ services:
   scylla-node:
     image: scylladb/scylla:2026.1
     container_name: scylla-node
+    network_mode: host
     command: >
       --smp 2 --memory 1G --overprovisioned 1
       --seeds ${TEACHER_IP}
@@ -21,7 +22,6 @@ services:
     depends_on:
       sysctl-init:
         condition: service_completed_successfully
-
     volumes:
       - scylla_data:/var/lib/scylla
     healthcheck:
